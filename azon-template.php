@@ -17,7 +17,9 @@ define('AZONPRESS_TEMPLATE_PATH', plugin_dir_path(__FILE__));
 
 class AzonpressTemplates
 {
-    public $template = "custom"; //[azonpress template="custom" asin=""]
+    public $template = "";
+    public $myTemplates = ["custom"];
+    //[azonpress template="custom" asin=""]
     public function boot()
     {
         $this->adminHooks();
@@ -25,16 +27,24 @@ class AzonpressTemplates
 
     public function adminHooks()
     {
-        add_action('azonpress_product_display_'. $this->template, array($this, 'renderer'), 10, 2);
-        add_filter('azonpress_templates', function ($templates) {
+        foreach ($this->myTemplates as $temp) {
             $templates[] = [
-                "name" => "custom",
-                "title" => "Custom",
+                "name" => $temp,
+                "title" => ucwords($temp),
                 "preview" => ""
             ];
-            return $templates;
+        }
+
+        add_filter('azonpress_templates', function ($masterTemp) use ($templates) {
+            $masterTemp = array_merge($masterTemp, $templates);
+            return $masterTemp;
         }, 10, 1);
+
+        foreach ($this->myTemplates as $temp) {
+            add_action('azonpress_product_display_'. $this->template, array($this, "renderer"), 10, 2);
+        }
     }
+
 
     public function renderer($items, $atts)
     {
@@ -46,22 +56,22 @@ class AzonpressTemplates
             'hide_price' => $processor::isHidePrice(),
             'last_updated_at' => $processor::getLastUpdateTime($items)
         );
-        self::render($this->template, $data);
+        $this->render($atts['template'], $data);
     }
 
-    public static function make($path, $data = [])
+    public function make($path, $data = [])
     {
         $path = str_replace('.', DIRECTORY_SEPARATOR, $path);
-        $file = AZONPRESS_TEMPLATE_PATH.'Templates/'.$path.'.php';
+        $file = AZONPRESS_TEMPLATE_PATH."{$path}/".$path.'.php';
         ob_start();
         extract($data);
         include $file;
         return ob_get_clean();
     }
 
-    public static function render($path, $data = [])
+    public function render($path, $data = [])
     {
-        echo static::make($path, $data);
+        echo $this->make($path, $data);
     }
 }
 
